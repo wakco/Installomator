@@ -2,69 +2,37 @@
 
 # Display Installomator Progress with SwiftDialog in Jamf
 
-Installomator 10 has functionality to communicate with [Bart Reardon's swiftDialog](https://github.com/bartreardon/swiftDialog). When you set the `DIALOG_CMD_FILE` variable Installomator will write progress for downloads and installation (with pkgs) to the command file which allows swiftDialog to display the progress.
+Installomator 10 has functionality to communicate with [Bart Reardon's swiftDialog](https://github.com/bartreardon/swiftDialog). However, you have to launch and setup swiftDialog to display a window with a progress bar before Installomator launches and also make sure swiftDialog quits after Installomator has run.
 
-However, you have to launch and setup swiftDialog to display a window with a progress bar before Installomator launches and also make sure swiftDialog quits after Installomator has run. This may seem complex at first but allows to configure swiftDialog just for your case without needing to modify the Installomator script.
+Here is an example script that combines the swiftDialog scripts in the Jamf folder, into a single script, removing the need for tracking the dialog command file across scripts, and uses a unique filename to avoid conflicts with other uses of swiftDialog.
 
-Here is an example script 
+## Initial Setup in Jamf Pro
 
+This requires a policy in Jamf Pro/Cloud uses an install direct script (from the MDM folder) with a custom event name for this script to use. If looking for a suggestion for a custom event name, you could set it to `InstallInstallomator`, and therefore not need to change line 11 (as below).
 
-Using a install direct script you can use the following script to run Installomator on the computers directly instead of keeping a copy within Jamf Pro/Cloud, allowing a more flexible approach to using Installomator, and not needing to worry so much about how jamf passes parameters.
+The `Install-with-swiftDialog.zsh` script should be loaded into Jamf Pro/Cloud with the following two lines changed:
+Line 11 contains a policy custom event name that should be changed to match custom event name of the policy being used to install and/or update Installomator (as above).
+Line 45 contains the overlay icon for swiftDialog, this should be an icon that should appear everytime this script is used, the one in the script is the Self Service icon, so if the script is triggered without an icon for the app, it'll show the Self Service icon overlaying itself.
 
-The Install-with-swiftDialog.zsh script should be loaded into Jamf Pro/Cloud and needs the following options setup in the Options tab:
+Add the following information to the **Parameter Values** in the **Options** tab (for a reminder when setting up policies that use this script):
 
-Parameter 4: Application (Installomator Label, or valuesfromarguments)
-- Passed directly to Installomator, and used as the Application if not set.
-Parameter 5: Full Readable Application Name (used in the window title and content, Defaults to Application)
-- Passed to swiftDialog for display purposes only
-Parameter 6: Icon (Default: Self Service icon)
-- Passed to swiftDialog for display purposes only
-Parameter 7: Notification level ( nodialogsilent, silent, nodialogsuccess, success, nodialogall, or Default: all)
+**Parameter 4:** Application (Installomator Label, or valuesfromarguments)
+- Passed to Installomator, and used as the Application if not set.
+
+**Parameter 5:** Full Readable Application Name (used in the window title and content, Defaults to Application)
+- Passed to swiftDialog for display purposes only.
+
+**Parameter 6:** Icon (Default: Self Service icon)
+- Passed to swiftDialog for display purposes only.
+
+**Parameter 7:** Notification level ( nodialogsilent, silent, nodialogsuccess, success, nodialogall, or Default: all)
 - filtered before passing to Installomator, if nodialog is attached, swiftDialog is not used, nodialog is removed before passing to Installomator
-Parameter 8: Remaining Installomator variables when using valuesfromarguments (should at least include name, type, downloadURL, and expectedTeamID)
 
+**Parameter 8:** Remaining Installomator variables when using valuesfromarguments (should at least include name, type, downloadURL, and expectedTeamID)
+- This should also be used for things like `INSTALL=force`.
 
+This works best with Self Service policies, but can also help with managing all executions of Installomator, as opposed to using **Files and Processes** to **Execute Command** `/usr/local/Installomator/Installomator.sh` ...
 
+The script will confirm both Installomator and swiftDialog are installed, installing them if not (through a Jamf policy for Installomator, and silently with Installomator for swiftDialog), before configuring and displaying a swiftDialog dialog (if configured). `Installomator.sh` will download and install the app while writing update commands to the dialog command file `Install-with-swiftDialog.zsh` creates. `Install-with-swiftDialog.zsh` removes the dialog command file once finished.
 
-
-Here are some example script that would run before and after Installomator to display a swiftDialog window and quit the process after. Since Jamf Pro executes scripts in alphanumerical order, the names are chosen accordingly, to ensure proper order.
-
-## Setup in Jamf Pro
-
-To show Installomator progress with swiftDialog from a Jamf Policy, you require three scripts:
-
-- `00_Prepare_SwiftDialog.sh`: Configures and displays the swiftDialog window
-- `Installomator.sh`: (v10 or higher)
-- `zz_Quit_SwiftDialog.sh`: quits swiftDialog
-
-Add these three scripts to your Jamf Pro and create a policy with these three scripts. The names are chosen that the script appear in the correct order. If you rename the scripts in Jamf Pro, this may disrupt the order and the workflow will not work anymore. The "Priority" of the scripts in the policy should all be the same value.
-
-The different scripts require a set of parameters. We will use the `googlechromepkg` label as an example.
-
-`00_Prepare_SwiftDialog.sh`
-
-Parameter 4: `/var/tmp/dialog.log` (Path to the swiftDialog command file)
-
-Parameter 5: `Installing Google Chrome...` (text shown in the swiftDialog window above the progress bar)
-
-Parameter 6: Path to or URL for an icon in swiftDialog. This can be a path on the client or a URL. See Dan Snelson's advice on how to get icon URLs for Self Service icons: https://rumble.com/v119x6y-harvesting-self-service-icons.html
-
-`Installomator.sh`
-
-Parameter 4: `googlechromepkg` (the label to install)
-
-Parameter 5: `DIALOG_CMD_FILE=/var/tmp/dialog.log` (the swiftDialog command file, this has to be the same value as parameter 4 in the previous script)
-
-Parameter 6: `NOTIFY=silent` (disable Installomator notifications, optional)
-
-You can add more configurations to the Installomator script when needed.
-
-`zz_Quit_SwiftDialog`
-
-Parameter 4: `/var/tmp/dialog.log` (the swiftDialog command file, this has to be the same value as parameter 4 in the first script)
-
-Then setup the remainder of the Jamf Policy to your needs. This works best with Self Service policies.
-
-When you run the policy, the first script will configure and display swiftDialog. Installomator.sh will download and install the app while writing the proper update commands to the file set in `DIALOG_CMD_FILE`. The final script will quit swiftDialog.
-
-![](SelfServiceProgress.png)
+Policies can now be created and personalised to each app by adding this script and configuring as needed.
