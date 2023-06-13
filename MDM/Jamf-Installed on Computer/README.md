@@ -1,0 +1,1 @@
+Using a install direct script you can use the following script to run Installomator on the computers directly instead of keeping a copy within Jamf Pro/Cloud, allowing a more flexible approach to using Installomator, and not needing to worry so much about how jamf passes parameters.
