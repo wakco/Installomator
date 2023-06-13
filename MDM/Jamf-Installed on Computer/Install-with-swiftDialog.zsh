@@ -15,10 +15,11 @@ if [ ! -e "$dialogApp" ]; then
 fi
 
 # Parameter 4: installomator label
-if [ "$4" = "" ] || [ "$4" = "valuesfromarguments" ] && [ "$8" = "" ]; then
+if [ "$4" = "" ] || [ "$4" = "valuesfromarguments" ] && [[ "$8" = *"name="* ]] && [[ "$8" = *"type="* ]] && [[ "$8" = *"downloadURL="* ]] && [[ "$8" = *"expectedTeamID="* ]]; then
  echo "$(date): Error, what is Installomator installing?!? (valuesfromarguements requires name, type, downloadURL, and expectedTeamID)"
  exit 1
 fi
+installLabel="$4"
 
 # Parameter 5: message displayed over the progress bar
 message=${5:-"$4"}
@@ -41,8 +42,8 @@ dialogUpdate() {
     fi
 }
 
-# Self Service's icon is our Uni. Crest, so lets just grab that.
-overlayicon="/Library/Waikato/Crest.png"
+# Using the Self Service icon for the overlay icon. Change this to an icon you want to see on all installs.
+overlayicon="/Applications/Self Service.app/Contents/Resources/AppIcon.icns"
 
 # Only display progress 
 case "$notify" in
@@ -75,13 +76,8 @@ esac
 sleep 0.1
 
 # Let the install begin...
-installLabel="$4"
 if [ ! "$8" = "" ]; then # while intended for valuesfromarguments, there may come the odd time when a manual addition is required
  installLabel="$installLabel $8"
-fi
-
-if [ "$3" = "completesetup" ] || [ -e "/Library/Application Support/JAMF/tmp/CompleteSetupTaskSequence" ] || [ -e "/Library/Application Support/JAMF/tmp/DEP3Engine" ];  then
- installLabel="$installLabel INSTALL=force"
 fi
 
 eval "$installomator $installLabel \"LOGO=$icon\" NOTIFY=$notify DIALOG_CMD_FILE=$dialog_command_file"
