@@ -41,7 +41,7 @@ lsagent)
         lsagentServer="$( getJSONValue "$lsagentJSON" lsagentServer )"
         lsagentKey="$( getJSONValue "$lsagentJSON" lsagentKey )"
         if [[ -z $lsagentServer && -z $lsagentKey ]]; then
-            cleanupAndExit 89 "This label requires a JSON file containing at least the following two fields: lsagentServer and/or lsagentKey. Optional fields include: lsagentPort, lsagentMode, and lsagentLanguage\nSee /Volumes/LsAgent/LsAgent-osx.app/Contents/MacOS/installbuilder.sh --help" ERROR
+            cleanupAndExit 89 "This label requires a JSON file containing at least one of the following two fields: lsagentServer and/or lsagentKey. Optional fields include: lsagentPort, lsagentMode, and lsagentLanguage\nSee /Volumes/LsAgent/LsAgent-osx.app/Contents/MacOS/installbuilder.sh --help" ERROR
         fi
         lsagentMode="${"$( getJSONValue "$lsagentJSON" lsagentMode )":-"osx"}"
         lsagentLanguage="${"$( getJSONValue "$lsagentJSON" lsagentLanguage )":-"en"}"
@@ -54,7 +54,7 @@ lsagent)
             CLIArguments+=( --agentkey $lsagentKey )
         fi
     else
-        cleanupAndExit 89 "This label requires a JSON file containing at least the following two fields: lsagentServer and/or lsagentKey. Optional fields include: lsagentPort, lsagentMode, and lsagentLanguage\nSee /Volumes/LsAgent/LsAgent-osx.app/Contents/MacOS/installbuilder.sh --help" ERROR
+        cleanupAndExit 89 "This label requires a JSON file containing at least one of the following two fields: lsagentServer and/or lsagentKey. Optional fields include: lsagentPort, lsagentMode, and lsagentLanguage\nSee /Volumes/LsAgent/LsAgent-osx.app/Contents/MacOS/installbuilder.sh --help" ERROR
     fi
     expectedTeamID="65LX6K7CBA"
     ;;
