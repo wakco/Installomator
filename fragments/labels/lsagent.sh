@@ -35,24 +35,26 @@ lsagent)
     appNewVersion="$(curl -fsIL "$downloadURL" | grep -i "location" | cut -w -f2 | cut -d "/" -f5-6 | tr "/" ".")"
     installerTool="LsAgent-osx.app"
     CLIInstaller="LsAgent-osx.app/Contents/MacOS/installbuilder.sh"
-    if [[ -z $lsagentPort ]]; then
-        lsagentPort=9524
-    fi
-    if [[ -z $lsagentMode ]]; then
-        lsagentMode="osx"
-    fi
-    if [[ -z $lsagentLanguage ]]; then
-        lsagentLanguage="en"
-    fi
-    if [[ -z $lsagentServer && -z $lsagentKey ]]; then
-        cleanupAndExit 89 "This label requires more parameters: lsagentServer and/or lsagentKey is required. Optional parameters include: lsagentPort, lsagentMode, and lsagentLanguage\nSee /Volumes/LsAgent/LsAgent-osx.app/Contents/MacOS/installbuilder.sh --help" ERROR
-    fi
-    CLIArguments=( --mode $lsagentMode --installer-language $lsagentLanguage )
-    if [[ -n $lsagentServer ]]; then
-        CLIArguments+=( --server $lsagentServer --port $lsagentPort )
-    fi
-    if [[ -n $lsagentKey ]]; then
-        CLIArguments+=( --agentkey $lsagentKey )
+    lsagentFile="/tmp/lsagent.json"
+    If [ -e "$lsagentFile" ]; then
+        lsagentJSON="$( cat "$lsagentFile" )"
+        lsagentServer="$( getJSONValue "$lsagentJSON" lsagentServer )"
+        lsagentKey="$( getJSONValue "$lsagentJSON" lsagentKey )"
+        if [[ -z $lsagentServer && -z $lsagentKey ]]; then
+            cleanupAndExit 89 "This label requires a JSON file containing at least the following two fields: lsagentServer and/or lsagentKey. Optional fields include: lsagentPort, lsagentMode, and lsagentLanguage\nSee /Volumes/LsAgent/LsAgent-osx.app/Contents/MacOS/installbuilder.sh --help" ERROR
+        fi
+        lsagentMode="${"$( getJSONValue "$lsagentJSON" lsagentMode )":-"osx"}"
+        lsagentLanguage="${"$( getJSONValue "$lsagentJSON" lsagentLanguage )":-"en"}"
+        CLIArguments=( --mode $lsagentMode --installer-language $lsagentLanguage )
+        if [[ -n $lsagentServer ]]; then
+            lsagentPort="${"$( getJSONValue "$lsagentJSON" lsagentPort )":-"9524"}"
+            CLIArguments+=( --server $lsagentServer --port $lsagentPort )
+        fi
+        if [[ -n $lsagentKey ]]; then
+            CLIArguments+=( --agentkey $lsagentKey )
+        fi
+    else
+        cleanupAndExit 89 "This label requires a JSON file containing at least the following two fields: lsagentServer and/or lsagentKey. Optional fields include: lsagentPort, lsagentMode, and lsagentLanguage\nSee /Volumes/LsAgent/LsAgent-osx.app/Contents/MacOS/installbuilder.sh --help" ERROR
     fi
     expectedTeamID="65LX6K7CBA"
     ;;
