@@ -88,7 +88,7 @@ These are the fragments in the order they are assembled. All files are in the `f
 - arguments.sh
 - (optional) labels from locations given with the `--labels` argument
 - labels/*.sh
-- main.txt
+- main.sh
 
 Even though the fragment files are not functional shell scripts, we decided to use the `.sh` file extension, so that Finder opens the files in the proper application and text editors recognize their file type for code display.
 
