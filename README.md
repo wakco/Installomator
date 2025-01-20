@@ -17,6 +17,8 @@ We have put a lot of work into making it stable and safe, but we _cannot_ and wi
 
 __Please note, that if you are contributing to this project with new labels or other suggestions in PRs, please put your changes in the files in the `fragments`-folder. DO NOT edit the full `Installomator.sh` script. The full script is assembled from the fragment files for release, and will be overwritten. See the [README.md](utils/README.md) file in the `utils` directory for detailed instructions.__
 
+This fork is a proof of concept for managing Github rate limits when labs are behind NAT, and perhaps even caching fresh labels as a preference over storing the labels in the script. - wakco
+
 Discussion, support and advice around Installomator happens in the `#installomator` channel in the [MacAdmins.org Slack](https://macadmins.org). Please go there for support questions. Do not create an issue just when you have a questions, but do file an issue or pull request (PR) for bugs or wrong behavior. When in doubt, ask in the above Slack channel.
 
 Please see [CONTRIBUTING.md](https://github.com/Installomator/Installomator/blob/dev/CONTRIBUTING.md) for how to contribute.
