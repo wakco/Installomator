@@ -309,6 +309,8 @@ LOGGING="INFO"
 #   - WARN      only warning
 #   - ERROR     only errors
 #   - REQ       ????
+# Log location
+log_location="/private/var/log/Installomator.log"
 
 # MDM profile name
 MDMProfileName=""
