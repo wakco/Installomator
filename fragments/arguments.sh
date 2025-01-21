@@ -10,16 +10,18 @@ fi
 
 # MARK: argument parsing
 if [[ $1 == "/" ]]; then
-    # jamf uses sends '/' as the first argument
+    # Jamf uses sends '/' as the first argument
     printlog "shifting arguments for Jamf" REQ
     shift 3
+    # error out if nothing else is provided from Jamf, no need to log labels back to Jamf
     if [[ $# -eq 0 ]]; then
         cleanupAndExit 1 "no label provided, what is Jamf installing?" ERROR
         exit 1
     fi
 fi
 
-if [[ $# -eq 0 ]] && [[ -z $label ]]; then # check if label is set inside script
+# check if label is set inside script or print label if no label provided inside or outside of script
+if [[ $# -eq 0 ]] && [[ -z $label ]]; then
     printlog "no label provided, printing labels" REQ
     grep -E '^[a-z0-9\_-]*(\)|\|\\)$' "$0" | tr -d ')|\' | grep -v -E '^(broken.*|longversion|version|valuesfromarguments)$' | sort
     #grep -E '^[a-z0-9\_-]*(\)|\|\\)$' "${labelFile}" | tr -d ')|\' | grep -v -E '^(broken.*|longversion|version|valuesfromarguments)$' | sort
@@ -28,6 +30,9 @@ fi
 
 # first argument is the label
 label=$1
+
+# label(?) captured, argument processessing from here doesn't need to scan it again
+shift 1
 
 # lowercase the label
 label=${label:l}
@@ -38,9 +43,7 @@ if [[ $label == "version" ]]; then
     exit 0
 fi
 
-# MARK: Logging
-log_location="/private/var/log/Installomator.log"
-
+# MARK: DEBUG Logging
 # Check if we're in debug mode, if so then set logging to DEBUG, otherwise default to INFO
 # if no log level is specified.
 if [[ $DEBUG -ne 0 ]]; then
