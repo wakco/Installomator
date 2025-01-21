@@ -9,17 +9,21 @@ fi
 
 
 # MARK: argument parsing
-if [[ $# -eq 0 ]]; then
-    if [[ -z $label ]]; then # check if label is set inside script
-        printlog "no label provided, printing labels" REQ
-        grep -E '^[a-z0-9\_-]*(\)|\|\\)$' "$0" | tr -d ')|\' | grep -v -E '^(broken.*|longversion|version|valuesfromarguments)$' | sort
-        #grep -E '^[a-z0-9\_-]*(\)|\|\\)$' "${labelFile}" | tr -d ')|\' | grep -v -E '^(broken.*|longversion|version|valuesfromarguments)$' | sort
-        exit 0
-    fi
-elif [[ $1 == "/" ]]; then
+if [[ $1 == "/" ]]; then
     # jamf uses sends '/' as the first argument
     printlog "shifting arguments for Jamf" REQ
     shift 3
+    if [[ $# -eq 0 ]]; then
+        cleanupAndExit 1 "no label provided, what is Jamf installing?" ERROR
+        exit 1
+    fi
+fi
+
+if [[ $# -eq 0 ]] && [[ -z $label ]]; then # check if label is set inside script
+    printlog "no label provided, printing labels" REQ
+    grep -E '^[a-z0-9\_-]*(\)|\|\\)$' "$0" | tr -d ')|\' | grep -v -E '^(broken.*|longversion|version|valuesfromarguments)$' | sort
+    #grep -E '^[a-z0-9\_-]*(\)|\|\\)$' "${labelFile}" | tr -d ')|\' | grep -v -E '^(broken.*|longversion|version|valuesfromarguments)$' | sort
+    exit 0
 fi
 
 # first argument is the label
