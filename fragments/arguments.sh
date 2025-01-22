@@ -66,13 +66,6 @@ elif [[ -z $LOGGING ]]; then
     datadogLoggingLevel=INFO
 fi
 
-# Associate logging levels with a numerical value so that we are able to identify what
-# should be removed. For example if the LOGGING=ERROR only printlog statements with the
-# level REQ and ERROR will be displayed. LOGGING=DEBUG will show all printlog statements.
-# If a printlog statement has no level set it's automatically assigned INFO.
-
-declare -A levels=(DEBUG 0 INFO 1 WARN 2 ERROR 3 REQ 4)
-
 # If we are able to detect an MDM URL (Jamf Pro) or another identifier for a customer/instance we grab it here, this is useful if we're centrally logging multiple MDM instances.
 if [[ -f /Library/Preferences/com.jamfsoftware.jamf.plist ]]; then
     mdmURL=$(defaults read /Library/Preferences/com.jamfsoftware.jamf.plist jss_url)
@@ -81,9 +74,6 @@ elif [[ -n "$MDMProfileName" ]]; then
 else
     mdmURL="Unknown"
 fi
-
-# Generate a session key for this run, this is useful to idenify streams when we're centrally logging.
-SESSION=$RANDOM
 
 # MARK: START
 printlog "################## Start Installomator v. $VERSION, date $VERSIONDATE" REQ
