@@ -1088,7 +1088,8 @@ processCommandLineArguments() {
             MDMProfileName=*|\
             datadogAPI=*|\
             LogDateFormat=*|\
-            githubAPI=*)
+            githubAPI=*|\
+            githubNAT=*)
                 setVariable "$CLArg" $1
             ;;
             name=*|\
