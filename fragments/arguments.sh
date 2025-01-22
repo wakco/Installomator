@@ -52,8 +52,17 @@ while [[ -n $1 ]]; do
     # shift to next argument
     shift 1
 done
-
 processCommandLineArguments before
+
+# prepare github
+githubAUTH=()
+if [[ -n $githubNAT ]] && [[ -n $githubAPI ]]; then
+    myIP="$( ifconfig "$( route get "api.github.com" | grep interface | awk '{ print $NF }' )" | grep "inet " | awk '{ print $2 }' )"
+    natIP="$( curl -s https://api.ipify.org )"
+    if [[ "$myIP" != "$natIP" ]] && [[ "$natIP" =~ "^$githubNAT" ]]; then
+        githubAUTH=( --header "Authorization: Bearer $githubAPI" )
+    fi
+fi
 
 # MARK: DEBUG Logging
 # Check if we're in debug mode, if so then set logging to DEBUG, otherwise default to INFO
