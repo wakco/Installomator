@@ -1118,7 +1118,7 @@ processCommandLineArguments() {
             ;;
             *)
                 if [ "$1" = "after" ]; then
-                    printlog "unrecognised variable from argument $CLArg" WARN
+                    printlog "unrecognised variable from argument ignored: $CLArg" WARN
                 fi
             ;;
         esac
