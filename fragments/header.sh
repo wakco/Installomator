@@ -311,6 +311,17 @@ LOGGING="INFO"
 #   - REQ       ????
 # Log location
 log_location="/private/var/log/Installomator.log"
+# Log Date format used when parsing logs for debugging, this is the default used by
+# install.log, override this in the case statements if you need something custom per
+# application (See adobeillustrator).  Using stadard GNU Date formatting.
+LogDateFormat="%Y-%m-%d %H:%M:%S"
+# Get the start time for parsing install.log if we fail.
+starttime=$(date "+$LogDateFormat")
+# Associate logging levels with a numerical value so that we are able to identify what
+# should be removed. For example if the LOGGING=ERROR only printlog statements with the
+# level REQ and ERROR will be displayed. LOGGING=DEBUG will show all printlog statements.
+# If a printlog statement has no level set it's automatically assigned INFO.
+declare -A levels=(DEBUG 0 INFO 1 WARN 2 ERROR 3 REQ 4)
 
 # MDM profile name
 MDMProfileName=""
@@ -330,17 +341,13 @@ githubAPI=""
 # Public NAT ip address or range (accepts 123.123.* format)
 githubNAT=""
 
-# Log Date format used when parsing logs for debugging, this is the default used by
-# install.log, override this in the case statements if you need something custom per
-# application (See adobeillustrator).  Using stadard GNU Date formatting.
-LogDateFormat="%Y-%m-%d %H:%M:%S"
-
-# Get the start time for parsing install.log if we fail.
-starttime=$(date "+$LogDateFormat")
-
 # Check if we have rosetta installed
 if [[ $(/usr/bin/arch) == "arm64" ]]; then
     if ! arch -x86_64 /usr/bin/true >/dev/null 2>&1; then # pgrep oahd >/dev/null 2>&1
         rosetta2=no
     fi
 fi
+
+# Generate a session key for this run, this is useful to idenify streams when we're centrally logging.
+SESSION=$RANDOM
+
