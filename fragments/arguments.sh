@@ -47,22 +47,14 @@ fi
 commandLineArguments=()
 while [[ -n $1 ]]; do
     if [[ $1 =~ ".*\=.*" ]]; then
-        # if an argument contains an = character, save it or send it to eval
+        # if an argument contains an = character, save it, and drop everything else unless its beforeAfterBOTH
         commandLineArguments+=("$1")
-        case "$1" in
-            DEBUG\=|
-            
-                printlog "setting variable from argument $1" INFO
-                eval $1
-            ;;
-            *)
-                
-            ;;
-        esac
     fi
     # shift to next argument
     shift 1
 done
+
+processCommandLineArguments before
 
 # MARK: DEBUG Logging
 # Check if we're in debug mode, if so then set logging to DEBUG, otherwise default to INFO
