@@ -1058,3 +1058,68 @@ updateDialog() {
     fi
 }
 
+setVariable() {
+    if [ "$1" = "after" ]; then
+        # only log it when setting after.
+        printlog "setting variable from argument $1" INFO
+    fi
+    eval $1
+}
+
+processCommandLineArguments() {
+    for CLArg in $commandLineArguments ; do
+        case "$CLArg" in
+            DEBUG=*|\
+            NOTIFY=*|\
+            PROMPT_TIMEOUT=*|\
+            BLOCKING_PROCESS_ACTION=*|\
+            LOGO=*|\
+            IGNORE_APP_STORE_APPS=*|\
+            SYSTEMOWNER=*|\
+            INSTALL=*|\
+            REOPEN=*|\
+            INTERRUPT_DND=*|\
+            IGNORE_DND_APPS=*|\
+            DIALOG_CMD_FILE=*|\
+            DIALOG_LIST_ITEM_NAME=*|\
+            NOTIFY_DIALOG=*|\
+            LOGGING=*|\
+            log_location=*|\
+            MDMProfileName=*|\
+            datadogAPI=*|\
+            LogDateFormat=*|\
+            githubAPI=*)
+                setVariable "$CLArg" $1
+            ;;
+            name=*|\
+            type=*|\
+            packageID=*|\
+            downloadURL=*|\
+            curlOptions=*|\
+            appNewVersion=*|\
+            versionKey=*|\
+            appCustomVersion*|\
+            expectedTeamID=*|\
+            archiveName=*|\
+            appName=*|\
+            targetDir=*|\
+            blockingProcess=*|\
+            pkgName=*|\
+            updateTool=*|\
+            updateToolArguments=*|\
+            updateToolRunAsCurrentUser=*|\
+            CLIInstaller=*|\
+            CLIArguments=*|\
+            installerTool=*)
+                if [ "$1" = "after" ]; then
+                    setVariable "$CLArg" $1
+                fi
+            ;;
+            *)
+                if [ "$1" = "after" ]; then
+                    printlog "unrecognised variable from argument $CLArg" WARN
+                fi
+            ;;
+        esac
+    done
+}
