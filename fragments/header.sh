@@ -325,6 +325,11 @@ datadogAPI=""
 # Simply add your own API key for this in order to have logs sent to Datadog
 # See more here: https://www.datadoghq.com/product/log-management/
 
+# Github API key for managing Githubs rate limits, intended for use in Labs
+githubAPI=""
+# Public NAT ip address or range (accepts 123.123.* format)
+githubNAT=""
+
 # Log Date format used when parsing logs for debugging, this is the default used by
 # install.log, override this in the case statements if you need something custom per
 # application (See adobeillustrator).  Using stadard GNU Date formatting.
