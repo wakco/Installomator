@@ -7,7 +7,6 @@ if ! is-at-least 10.14 $installedOSversion; then
     exit 98
 fi
 
-
 # MARK: argument parsing
 if [[ $1 == "/" ]]; then
     # Jamf uses sends '/' as the first argument
