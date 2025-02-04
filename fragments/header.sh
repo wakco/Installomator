@@ -338,8 +338,6 @@ datadogAPI=""
 
 # Github API key for managing Githubs rate limits, intended for use in Labs
 githubAPI=""
-# Public NAT ip address or range (accepts 123.123.* format)
-githubNAT=""
 
 # Check if we have rosetta installed
 if [[ $(/usr/bin/arch) == "arm64" ]]; then
