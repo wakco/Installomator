@@ -54,16 +54,6 @@ while [[ -n $1 ]]; do
 done
 processCommandLineArguments before
 
-# prepare github
-githubAUTH=()
-if [[ -n $githubNAT ]] && [[ -n $githubAPI ]]; then
-    myIP="$( ifconfig "$( route get "api.github.com" | grep interface | awk '{ print $NF }' )" | grep "inet " | awk '{ print $2 }' )"
-    natIP="$( curl -s https://api.ipify.org )"
-    if [[ "$myIP" != "$natIP" ]] && [[ "$natIP" =~ "^$githubNAT" ]]; then
-        githubAUTH=( --header "Authorization: Bearer $githubAPI" )
-    fi
-fi
-
 # MARK: DEBUG Logging
 # Check if we're in debug mode, if so then set logging to DEBUG, otherwise default to INFO
 # if no log level is specified.
@@ -115,6 +105,12 @@ if [[ ! -x $DIALOG_CMD ]]; then
     # Swift Dialog is not installed, clear cmd file variable to ignore
     printlog "SwiftDialog is not installed, clear cmd file var"
     DIALOG_CMD_FILE=""
+fi
+
+# prepare github
+githubAUTH=()
+if [[ -n $githubAPI ]]; then
+    githubAUTH=( --header "Authorization: Bearer $githubAPI" )
 fi
 
 # MARK: labels in case statement
