@@ -158,26 +158,21 @@ downloadURLFromGit() { # $1 git user name, $2 git repo name
     gitusername=${1?:"no git user name"}
     gitreponame=${2?:"no git repo name"}
 
-    if [[ $type == "pkgInDmg" ]]; then
-        filetype="dmg"
-    elif [[ $type == "pkgInZip" ]]; then
-        filetype="zip"
-    else
-        filetype=$type
-    fi
-
+    filetype="\."
     if [ -n "$archiveName" ]; then
-        downloadURL=$(curl -sfL ${githubAUTH} "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | awk -F '"' "/browser_download_url/ && /$archiveName\"/ { print \$4; exit }")
-        if [[ "$(echo $downloadURL | grep -ioE "https.*$archiveName")" == "" ]]; then
-            #downloadURL=https://github.com$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*$archiveName" | head -1)
-            downloadURL="https://github.com$(curl -sfL "$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "expanded_assets" | head -1)" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*$archiveName" | head -1)"
-        fi
+        filetype="$archiveName"
+    elif [[ $type == "pkgInDmg" ]]; then
+        filetype+="dmg"
+    elif [[ $type == "pkgInZip" ]]; then
+        filetype+="zip"
     else
-        downloadURL=$(curl -sfL ${githubAUTH} "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | awk -F '"' "/browser_download_url/ && /$filetype\"/ { print \$4; exit }")
-        if [[ "$(echo $downloadURL | grep -ioE "https.*.$filetype")" == "" ]]; then
-            #downloadURL=https://github.com$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*\.$filetype" | head -1)
-            downloadURL="https://github.com$(curl -sfL "$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "expanded_assets" | head -1)" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*\.$filetype" | head -1)"
-        fi
+        filetype+=$type
+    fi
+    
+    downloadURL=$(curl -sfL ${githubAUTH} "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | awk -F '"' "/browser_download_url/ && /$filetype\"/ { print \$4; exit }")
+    if [[ "$(echo $downloadURL | grep -ioE "https.*$filetype")" == "" ]]; then
+        #downloadURL=https://github.com$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*$filetype" | head -1)
+        downloadURL="https://github.com$(curl -sfL "$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "expanded_assets" | head -1)" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*$filetype" | head -1)"
     fi
     if [ -z "$downloadURL" ]; then
         cleanupAndExit 14 "could not retrieve download URL for $gitusername/$gitreponame" ERROR
