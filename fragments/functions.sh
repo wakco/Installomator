@@ -158,7 +158,9 @@ downloadURLFromGit() { # $1 git user name, $2 git repo name
     gitusername=${1?:"no git user name"}
     gitreponame=${2?:"no git repo name"}
 
+    # For grep to work, the dot must be set this way, however awk doesn't care.
     filetype="\."
+    # Doing it this way means no need to double up on how the downloadURL is set.
     if [ -n "$archiveName" ]; then
         filetype="$archiveName"
     elif [[ $type == "pkgInDmg" ]]; then
@@ -169,7 +171,7 @@ downloadURLFromGit() { # $1 git user name, $2 git repo name
         filetype+=$type
     fi
     
-    downloadURL=$(curl -sfL ${githubAUTH} "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | awk -F '"' "/browser_download_url/ && /$filetype\"/ { print \$4; exit }")
+    downloadURL=$(curl -sfL "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | awk -F '"' "/browser_download_url/ && /$filetype\"/ { print \$4; exit }")
     if [[ "$(echo $downloadURL | grep -ioE "https.*$filetype")" == "" ]]; then
         #downloadURL=https://github.com$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*$filetype" | head -1)
         downloadURL="https://github.com$(curl -sfL "$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "expanded_assets" | head -1)" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*$filetype" | head -1)"
