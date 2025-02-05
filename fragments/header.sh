@@ -338,7 +338,7 @@ datadogAPI=""
 
 # Github API key for managing Githubs rate limits, intended for use in Labs sharing
 # a single NAT'd IP address. Create and use an API key limited to read only access.
-githubAPI=""
+GITHUBAPI=""
 
 # Check if we have rosetta installed
 if [[ $(/usr/bin/arch) == "arm64" ]]; then
