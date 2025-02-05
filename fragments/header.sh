@@ -336,7 +336,8 @@ datadogAPI=""
 # Simply add your own API key for this in order to have logs sent to Datadog
 # See more here: https://www.datadoghq.com/product/log-management/
 
-# Github API key for managing Githubs rate limits, intended for use in Labs
+# Github API key for managing Githubs rate limits, intended for use in Labs sharing
+# a single NAT'd IP address. Create and use an API key limited to read only access.
 githubAPI=""
 
 # Check if we have rosetta installed
