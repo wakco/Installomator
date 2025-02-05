@@ -111,6 +111,7 @@ fi
 githubAUTH=()
 if [[ -n $GITHUBAPI ]]; then
     githubAUTH=( --header "Authorization: Bearer $GITHUBAPI" )
+    checkRATEfromGit
 fi
 
 # MARK: labels in case statement
