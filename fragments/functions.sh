@@ -159,15 +159,12 @@ checkRATEfromGit() {
     githubreset=$( echo $githubrate | grep reset | tail -n 1 | awk '{ print $2 }' | tr -d ',' )
     githublimit=$( echo $githubrate | grep limit | tail -n 1 | awk '{ print $2 }' | tr -d ',' )
     if [ $githubremaining = 0 ]; then
-        cleanupAndExit 14 "could not retrieve download URL for $1/$2, because Github hits remaining is 0, and the limit is $githublimit per hour, it will reset at $( date -jr $githubreset )" ERROR
+        cleanupAndExit 14 "can not download from Github because hits remaining is 0, with the limit at $githublimit per hour, it will reset at $( date -jr $githubreset )" ERROR
     fi
-    if [[ "${githubAUTH}" = "" ]]; then
-        githubwarn=10
+    if [ $githubremaining -lt 100 ]; then
+        printlog "remaining API hits available for Github is $githubremaining out of $githublimit per hour, and is below a recommended 100 API hits available. The count will reset at $( date -jr $githubreset )" WARN
     else
-        githubwarn=100
-    fi
-    if [ $githubremaining -lt $githubwarn ]; then
-        printlog "remaining API hits available for Github is $githubremaining out of $githublimit per hour, below a recommended $githubwarn API hits available. The count will reset at $( date -jr $githubreset )" WARN
+        printlog "remaining API hits available for Github is $githubremaining out of $githublimit per hour, and is above a recommended 100 API hits available. The count will reset at $( date -jr $githubreset )" INFO
     fi
 }
 
@@ -188,8 +185,6 @@ downloadURLFromGit() { # $1 git user name, $2 git repo name
     else
         filetype+=$type
     fi
-
-    checkRATEfromGit $gitusername $gitreponame
 
     if [[ "${githubAUTH}" = "" ]]; then
         downloadURL=$(curl -sfL "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | awk -F '"' "/browser_download_url/ && /$filetype\"/ { print \$4; exit }")
@@ -222,8 +217,6 @@ versionFromGit() {
     # $1 git user name, $2 git repo name
     gitusername=${1?:"no git user name"}
     gitreponame=${2?:"no git repo name"}
-
-    checkRATEfromGit $gitusername $gitreponame
 
     if [[ "${githubAUTH}" = "" ]]; then
         appNewVersion=$(curl -sLI "https://github.com/$gitusername/$gitreponame/releases/latest" | grep -i "^location" | tr "/" "\n" | tail -1 | sed 's/[^0-9\.]//g')
