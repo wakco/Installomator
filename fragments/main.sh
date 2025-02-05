@@ -266,9 +266,9 @@ else
     fi
 
     if [[ "${githubAUTH}" = "" ]]; then
+        checkRATEfromGit
         githubAUTH+=( --header "Accept:application/octet-stream" )
         curlOptions+=$githubAUTH
-        checkRATEfromGit
     fi
     if [[ $DIALOG_CMD_FILE != "" ]]; then
         # pipe
