@@ -109,8 +109,8 @@ fi
 
 # prepare github
 githubAUTH=()
-if [[ -n $githubAPI ]]; then
-    githubAUTH=( --header "Authorization: Bearer $githubAPI" )
+if [[ -n $GITHUBAPI ]]; then
+    githubAUTH=( --header "Authorization: Bearer $GITHUBAPI" )
 fi
 
 # MARK: labels in case statement
