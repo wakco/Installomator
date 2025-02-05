@@ -265,6 +265,10 @@ else
         fi
     fi
 
+    if [[ "${githupAUTH}" = "" ]]; then
+        githubAUTH+=( --header "Accept:application/octet-stream" )
+        curlOptions+=$githubAUTH
+    fi
     if [[ $DIALOG_CMD_FILE != "" ]]; then
         # pipe
         pipe="$tmpDir/downloadpipe"
