@@ -159,7 +159,7 @@ checkRATEfromGit() {
     githupreset=$( echo $githubrate | grep reset | tail -n 1 | awk '{ print $2 }' | tr -d ',' )
     githublimit=$( echo $githubrate | grep limit | tail -n 1 | awk '{ print $2 }' | tr -d ',' )
     if [ $githubremaining = 0 ]; then
-        cleanupAndExit 14 "could not retrieve download URL for $1/$2, because Github rate remaining is 0, and the limit is $githublimit, it will reset at $( date -jr $githubreset )" ERROR
+        cleanupAndExit 14 "could not retrieve download URL for $1/$2, because Github hits remaining is 0, and the limit is $githublimit per hour, it will reset at $( date -jr $githubreset )" ERROR
     fi
     if [[ "${githupAUTH}" = "" ]]; then
         githubwarn=10
@@ -167,7 +167,7 @@ checkRATEfromGit() {
         githubwarn=100
     fi
     if [ $githubremaining -lt $githubwarn ]; then
-        printlog "remaining API hits available for Github is $githubremaining out of $githublimit, below a recommended $githubwarn API hits available. The count will reset at $( date -jr $githubreset )" WARN
+        printlog "remaining API hits available for Github is $githubremaining out of $githublimit per hour, below a recommended $githubwarn API hits available. The count will reset at $( date -jr $githubreset )" WARN
     fi
 }
 
@@ -198,7 +198,16 @@ downloadURLFromGit() { # $1 git user name, $2 git repo name
             downloadURL="https://github.com$(curl -sfL "$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "expanded_assets" | head -1)" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*$filetype" | head -1)"
         fi
     else
-        
+        # find "asset" download link
+        gitassetcount=0
+        gitassets="$(getJSONValue "$(curl -sfL ${githubAUTH} "https://api.github.com/repos/processing/processing4/releases/latest")" ".assets")"
+        until [ "$(getJSONValue "$gitassets" ".[$gitassetcount].id")" = "" ]; do
+            if [[ "$(echo "$(getJSONValue "$gitassets" ".[$gitassetcount].name")" | grep -ioE ".*$filetype")" != "" ]]; then
+                downloadURL="$(getJSONValue "$gitassets" ".[$gitassetcount].url")"
+                break
+            fi
+            ((gitassetcount++))
+        done
     fi
     if [ -z "$downloadURL" ]; then
         cleanupAndExit 14 "could not retrieve download URL for $gitusername/$gitreponame" ERROR
