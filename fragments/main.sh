@@ -265,7 +265,7 @@ else
         fi
     fi
 
-    if [[ "${githupAUTH}" = "" ]]; then
+    if [[ "${githubAUTH}" = "" ]]; then
         githubAUTH+=( --header "Accept:application/octet-stream" )
         curlOptions+=$githubAUTH
     fi
