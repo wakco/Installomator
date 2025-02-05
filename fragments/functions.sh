@@ -154,14 +154,14 @@ deduplicatelogs() {
 }
 
 checkRATEfromGit() {
-    githubrate="$(curl -s ${githupAUTH} https://api.github.com/rate_limit)"
+    githubrate="$(curl -s ${githubAUTH} https://api.github.com/rate_limit)"
     githubremaining="$( echo $githubrate | grep remaining | tail -n 1 | awk '{ print $2 }' | tr -d ',' )"
-    githupreset=$( echo $githubrate | grep reset | tail -n 1 | awk '{ print $2 }' | tr -d ',' )
+    githubreset=$( echo $githubrate | grep reset | tail -n 1 | awk '{ print $2 }' | tr -d ',' )
     githublimit=$( echo $githubrate | grep limit | tail -n 1 | awk '{ print $2 }' | tr -d ',' )
     if [ $githubremaining = 0 ]; then
         cleanupAndExit 14 "could not retrieve download URL for $1/$2, because Github hits remaining is 0, and the limit is $githublimit per hour, it will reset at $( date -jr $githubreset )" ERROR
     fi
-    if [[ "${githupAUTH}" = "" ]]; then
+    if [[ "${githubAUTH}" = "" ]]; then
         githubwarn=10
     else
         githubwarn=100
@@ -191,7 +191,7 @@ downloadURLFromGit() { # $1 git user name, $2 git repo name
 
     checkRATEfromGit $gitusername $gitreponame
 
-    if [[ "${githupAUTH}" = "" ]]; then
+    if [[ "${githubAUTH}" = "" ]]; then
         downloadURL=$(curl -sfL "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | awk -F '"' "/browser_download_url/ && /$filetype\"/ { print \$4; exit }")
         if [[ "$(echo $downloadURL | grep -ioE "https.*$filetype")" == "" ]]; then
             #downloadURL=https://github.com$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*$filetype" | head -1)
@@ -201,9 +201,9 @@ downloadURLFromGit() { # $1 git user name, $2 git repo name
         # find "asset" download link
         gitassetcount=0
         gitassets="$(getJSONValue "$(curl -sfL ${githubAUTH} "https://api.github.com/repos/processing/processing4/releases/latest")" ".assets")"
-        until [ "$(getJSONValue "$gitassets" ".[$gitassetcount].id")" = "" ]; do
-            if [[ "$(echo "$(getJSONValue "$gitassets" ".[$gitassetcount].name")" | grep -ioE ".*$filetype")" != "" ]]; then
-                downloadURL="$(getJSONValue "$gitassets" ".[$gitassetcount].url")"
+        until [ "$(getJSONValue "$gitassets" "[$gitassetcount].id")" = "" ]; do
+            if [[ "$(echo "$(getJSONValue "$gitassets" "[$gitassetcount].name")" | grep -ioE ".*$filetype")" != "" ]]; then
+                downloadURL="$(getJSONValue "$gitassets" "[$gitassetcount].url")"
                 break
             fi
             ((gitassetcount++))
@@ -225,7 +225,7 @@ versionFromGit() {
 
     checkRATEfromGit $gitusername $gitreponame
 
-    if [[ "${githupAUTH}" = "" ]]; then
+    if [[ "${githubAUTH}" = "" ]]; then
         appNewVersion=$(curl -sLI "https://github.com/$gitusername/$gitreponame/releases/latest" | grep -i "^location" | tr "/" "\n" | tail -1 | sed 's/[^0-9\.]//g')
     else
         appNewVersion=$(curl -L --silent --fail ${githubAUTH} "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | grep tag_name | cut -d '"' -f 4 | sed 's/[^0-9\.]//g')
