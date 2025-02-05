@@ -153,6 +153,24 @@ deduplicatelogs() {
     done <<< "$loginput"
 }
 
+checkRATEfromGit() {
+    githubrate="$(curl -s ${githupAUTH} https://api.github.com/rate_limit)"
+    githubremaining="$( echo $githubrate | grep remaining | tail -n 1 | awk '{ print $2 }' | tr -d ',' )"
+    githupreset=$( echo $githubrate | grep reset | tail -n 1 | awk '{ print $2 }' | tr -d ',' )
+    githublimit=$( echo $githubrate | grep limit | tail -n 1 | awk '{ print $2 }' | tr -d ',' )
+    if [ $githubremaining = 0 ]; then
+        cleanupAndExit 14 "could not retrieve download URL for $1/$2, because Github rate remaining is 0, and the limit is $githublimit, it will reset at $( date -jr $githubreset )" ERROR
+    fi
+    if [[ "${githupAUTH}" = "" ]]; then
+        githubwarn=10
+    else
+        githubwarn=100
+    fi
+    if [ $githubremaining -lt $githubwarn ]; then
+        printlog "remaining API hits available for Github is $githubremaining out of $githublimit, below a recommended $githubwarn API hits available. The count will reset at $( date -jr $githubreset )" WARN
+    fi
+}
+
 # will get the latest release download from a github repo
 downloadURLFromGit() { # $1 git user name, $2 git repo name
     gitusername=${1?:"no git user name"}
@@ -170,6 +188,8 @@ downloadURLFromGit() { # $1 git user name, $2 git repo name
     else
         filetype+=$type
     fi
+
+    checkRATEfromGit $gitusername $gitreponame
     
     downloadURL=$(curl -sfL "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | awk -F '"' "/browser_download_url/ && /$filetype\"/ { print \$4; exit }")
     if [[ "$(echo $downloadURL | grep -ioE "https.*$filetype")" == "" ]]; then
@@ -190,6 +210,8 @@ versionFromGit() {
     gitusername=${1?:"no git user name"}
     gitreponame=${2?:"no git repo name"}
 
+    checkRATEfromGit $gitusername $gitreponame
+    
     #appNewVersion=$(curl -L --silent --fail "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | grep tag_name | cut -d '"' -f 4 | sed 's/[^0-9\.]//g')
     appNewVersion=$(curl -sLI "https://github.com/$gitusername/$gitreponame/releases/latest" | grep -i "^location" | tr "/" "\n" | tail -1 | sed 's/[^0-9\.]//g')
     if [ -z "$appNewVersion" ]; then
