@@ -161,10 +161,12 @@ checkRATEfromGit() {
     if [ $githubremaining = 0 ]; then
         cleanupAndExit 14 "can not download from Github because hits remaining is 0, with the limit at $githublimit per hour, it will reset at $( date -jr $githubreset )" ERROR
     fi
-    if [ $githubremaining -lt 100 ]; then
-        printlog "remaining API hits available for Github is $githubremaining out of $githublimit per hour, and is below a recommended 100 API hits available. The count will reset at $( date -jr $githubreset )" WARN
-    else
-        printlog "remaining API hits available for Github is $githubremaining out of $githublimit per hour, and is above a recommended 100 API hits available. The count will reset at $( date -jr $githubreset )" INFO
+    if [ "$1" = "API" ]; then
+        if [ $githubremaining -lt 100 ]; then
+            printlog "Using Github API, remaining API hits available for Github is $githubremaining out of $githublimit per hour, and is below a recommended 100 API hits available. The count will reset at $( date -jr $githubreset )" WARN
+        else
+            printlog "Using Github API, remaining API hits available for Github is $githubremaining out of $githublimit per hour, and is above a recommended 100 API hits available. The count will reset at $( date -jr $githubreset )" INFO
+        fi
     fi
 }
 
@@ -185,6 +187,8 @@ downloadURLFromGit() { # $1 git user name, $2 git repo name
     else
         filetype+=$type
     fi
+
+    checkRATEfromGit
 
     if [[ "${githubAUTH}" = "" ]]; then
         downloadURL=$(curl -sfL "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | awk -F '"' "/browser_download_url/ && /$filetype\"/ { print \$4; exit }")
@@ -217,6 +221,8 @@ versionFromGit() {
     # $1 git user name, $2 git repo name
     gitusername=${1?:"no git user name"}
     gitreponame=${2?:"no git repo name"}
+
+    checkRATEfromGit
 
     if [[ "${githubAUTH}" = "" ]]; then
         appNewVersion=$(curl -sLI "https://github.com/$gitusername/$gitreponame/releases/latest" | grep -i "^location" | tr "/" "\n" | tail -1 | sed 's/[^0-9\.]//g')
