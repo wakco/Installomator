@@ -266,9 +266,13 @@ else
     fi
 
     if [[ "${githubAUTH}" != "" ]]; then
-        checkRATEfromGit API
-        githubAUTH+=( --header "Accept: application/octet-stream" )
-        curlOptions+=( ${githubAUTH} )
+        if [[ "$downloadURL" =~ "https://api.github.com"* ]]; then
+            checkRATEfromGit API
+            githubAUTH+=( --header "Accept: application/octet-stream" )
+            curlOptions+=( ${githubAUTH} )
+        else
+            printlog "ignoring GITHUBAPI as $downloadURL is not a Guthub API URL" WARN
+        fi
     fi
     if [[ $DIALOG_CMD_FILE != "" ]]; then
         # pipe
