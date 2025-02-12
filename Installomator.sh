@@ -26,7 +26,7 @@ export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 # also no actual installation will be performed
 # debug mode 1 will download to the directory the script is run in, but will not check the version
 # debug mode 2 will download to the temp directory, check for blocking processes, check the version, but will not install anything or remove the current version
-DEBUG=1
+DEBUG=0
 
 # notify behavior
 NOTIFY=success
@@ -221,6 +221,8 @@ NOTIFY_DIALOG=0
 #     - CFBundleVersion
 #   Not all software titles uses fields the same.
 #   See Opera label.
+#   This is the default setting:
+versionKey="CFBundleShortVersionString"
 #
 # - appCustomVersion(){}: (optional function)
 #   This function can be added to your label, if a specific custom
@@ -244,6 +246,8 @@ NOTIFY_DIALOG=0
 #   When not given the archiveName is derived from the $name.
 #   Note: This has to be defined BEFORE calling downloadURLFromGit or
 #   versionFromGit functions in the label.
+#   Due to the potential of file naming issues when pattern matching, downloadURLFromGit
+#   will reset the archiveName to the download filename from GitHub.
 #
 # - appName: (optional)
 #   File name of the app bundle in the dmg to verify and copy (include .app).
@@ -309,6 +313,19 @@ LOGGING="INFO"
 #   - WARN      only warning
 #   - ERROR     only errors
 #   - REQ       ????
+# Log location
+log_location="/private/var/log/Installomator.log"
+# Log Date format used when parsing logs for debugging, this is the default used by
+# install.log, override this in the case statements if you need something custom per
+# application (See adobeillustrator).  Using stadard GNU Date formatting.
+LogDateFormat="%Y-%m-%d %H:%M:%S"
+# Get the start time for parsing install.log if we fail.
+starttime=$(date "+$LogDateFormat")
+# Associate logging levels with a numerical value so that we are able to identify what
+# should be removed. For example if the LOGGING=ERROR only printlog statements with the
+# level REQ and ERROR will be displayed. LOGGING=DEBUG will show all printlog statements.
+# If a printlog statement has no level set it's automatically assigned INFO.
+declare -A levels=(DEBUG 0 INFO 1 WARN 2 ERROR 3 REQ 4)
 
 # MDM profile name
 MDMProfileName=""
@@ -323,13 +340,9 @@ datadogAPI=""
 # Simply add your own API key for this in order to have logs sent to Datadog
 # See more here: https://www.datadoghq.com/product/log-management/
 
-# Log Date format used when parsing logs for debugging, this is the default used by
-# install.log, override this in the case statements if you need something custom per
-# application (See adobeillustrator).  Using stadard GNU Date formatting.
-LogDateFormat="%Y-%m-%d %H:%M:%S"
-
-# Get the start time for parsing install.log if we fail.
-starttime=$(date "+$LogDateFormat")
+# Github API key for managing Githubs rate limits, intended for use in Labs sharing
+# a single NAT'd IP address. Create and use an API key limited to read only access.
+GITHUBAPI=""
 
 # Check if we have rosetta installed
 if [[ $(/usr/bin/arch) == "arm64" ]]; then
@@ -337,8 +350,12 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
         rosetta2=no
     fi
 fi
-VERSION="10.7beta"
-VERSIONDATE="2025-01-18"
+
+# Generate a session key for this run, this is useful to idenify streams when we're centrally logging.
+SESSION=$RANDOM
+
+VERSION="10.7"
+VERSIONDATE="2025-02-05"
 
 # MARK: Functions
 
@@ -495,31 +512,66 @@ deduplicatelogs() {
     done <<< "$loginput"
 }
 
+checkRATEfromGit() {
+    githubrate="$(curl -s ${githubAUTH} https://api.github.com/rate_limit)"
+    githubremaining="$( echo $githubrate | grep remaining | tail -n 1 | awk '{ print $2 }' | tr -d ',' )"
+    githubreset=$( echo $githubrate | grep reset | tail -n 1 | awk '{ print $2 }' | tr -d ',' )
+    githublimit=$( echo $githubrate | grep limit | tail -n 1 | awk '{ print $2 }' | tr -d ',' )
+    if [ $githubremaining = 0 ]; then
+        cleanupAndExit 14 "can not download from Github because hits remaining is 0, with the limit at $githublimit per hour, it will reset at $( date -jr $githubreset )" ERROR
+    fi
+    if [ "$1" = "API" ]; then
+        if [ $githubremaining -lt 100 ]; then
+            printlog "Using Github API, remaining API hits available for Github is $githubremaining out of $githublimit per hour, and is below a recommended 100 API hits available. The count will reset at $( date -jr $githubreset )" WARN
+        else
+            printlog "Using Github API, remaining API hits available for Github is $githubremaining out of $githublimit per hour, and is above a recommended 100 API hits available. The count will reset at $( date -jr $githubreset )" INFO
+        fi
+    fi
+}
+
 # will get the latest release download from a github repo
 downloadURLFromGit() { # $1 git user name, $2 git repo name
     gitusername=${1?:"no git user name"}
     gitreponame=${2?:"no git repo name"}
 
-    if [[ $type == "pkgInDmg" ]]; then
-        filetype="dmg"
+    # For grep to work, the dot must be set this way, however awk doesn't care.
+    filetype="\."
+    # Doing it this way means no need to double up on how the downloadURL is set.
+    if [ -n "$archiveName" ]; then
+        filetype="$archiveName"
+    elif [[ $type == "pkgInDmg" ]]; then
+        filetype+="dmg"
     elif [[ $type == "pkgInZip" ]]; then
-        filetype="zip"
+        filetype+="zip"
     else
-        filetype=$type
+        filetype+=$type
     fi
 
-    if [ -n "$archiveName" ]; then
-        downloadURL=$(curl -sfL "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | awk -F '"' "/browser_download_url/ && /$archiveName\"/ { print \$4; exit }")
-        if [[ "$(echo $downloadURL | grep -ioE "https.*$archiveName")" == "" ]]; then
-            #downloadURL=https://github.com$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*$archiveName" | head -1)
-            downloadURL="https://github.com$(curl -sfL "$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "expanded_assets" | head -1)" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*$archiveName" | head -1)"
+    checkRATEfromGit
+
+    if [[ "${githubAUTH}" = "" ]]; then
+        downloadURL=$(curl -sfL "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | awk -F '"' "/browser_download_url/ && /$filetype\"/ { print \$4; exit }")
+        if [[ "$(echo $downloadURL | grep -ioE "https.*$filetype")" == "" ]]; then
+            #downloadURL=https://github.com$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*$filetype" | head -1)
+            downloadURL="https://github.com$(curl -sfL "$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "expanded_assets" | head -1)" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*$filetype" | head -1)"
+        fi
+        if [[ "$(echo $downloadURL | grep -ioE "https.*$filetype")" != "" ]]; then
+            archiveName="$( echo $downloadURL | awk -F '/' '{ print $NF }' )"
+            # remove any pattern matching that might screw up the downloaded filename
         fi
     else
-        downloadURL=$(curl -sfL "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | awk -F '"' "/browser_download_url/ && /$filetype\"/ { print \$4; exit }")
-        if [[ "$(echo $downloadURL | grep -ioE "https.*.$filetype")" == "" ]]; then
-            #downloadURL=https://github.com$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*\.$filetype" | head -1)
-            downloadURL="https://github.com$(curl -sfL "$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "expanded_assets" | head -1)" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*\.$filetype" | head -1)"
-        fi
+        # find "asset" download link
+        gitassetcount=0
+        gitassets="$(getJSONValue "$(curl -sfL ${githubAUTH} "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest")" ".assets")"
+        until [ "$(getJSONValue "$gitassets" "[$gitassetcount].id")" = "" ]; do
+            if [[ "$(echo "$(getJSONValue "$gitassets" "[$gitassetcount].name")" | grep -ioE ".*$filetype")" != "" ]]; then
+                downloadURL="$(getJSONValue "$gitassets" "[$gitassetcount].url")"
+                archiveName="$(getJSONValue "$gitassets" "[$gitassetcount].name")"
+                # remove any pattern matching that might screw up the downloaded filename
+                break
+            fi
+            ((gitassetcount++))
+        done
     fi
     if [ -z "$downloadURL" ]; then
         cleanupAndExit 14 "could not retrieve download URL for $gitusername/$gitreponame" ERROR
@@ -535,8 +587,13 @@ versionFromGit() {
     gitusername=${1?:"no git user name"}
     gitreponame=${2?:"no git repo name"}
 
-    #appNewVersion=$(curl -L --silent --fail "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | grep tag_name | cut -d '"' -f 4 | sed 's/[^0-9\.]//g')
-    appNewVersion=$(curl -sLI "https://github.com/$gitusername/$gitreponame/releases/latest" | grep -i "^location" | tr "/" "\n" | tail -1 | sed 's/[^0-9\.]//g')
+    checkRATEfromGit
+
+    if [[ "${githubAUTH}" = "" ]]; then
+        appNewVersion=$(curl -sLI "https://github.com/$gitusername/$gitreponame/releases/latest" | grep -i "^location" | tr "/" "\n" | tail -1 | sed 's/[^0-9\.]//g')
+    else
+        appNewVersion=$(curl -L --silent --fail ${githubAUTH} "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | grep tag_name | cut -d '"' -f 4 | sed 's/[^0-9\.]//g')
+    fi
     if [ -z "$appNewVersion" ]; then
         printlog "could not retrieve version number for $gitusername/$gitreponame" WARN
         appNewVersion=""
@@ -1400,6 +1457,72 @@ updateDialog() {
     fi
 }
 
+setVariable() {
+    if [ "$1" = "after" ]; then
+        # only log it when setting after.
+        printlog "setting variable from argument $1" INFO
+    fi
+    eval $1
+}
+
+processCommandLineArguments() {
+    for CLArg in $commandLineArguments ; do
+        case "$CLArg" in
+            DEBUG=*|\
+            NOTIFY=*|\
+            PROMPT_TIMEOUT=*|\
+            BLOCKING_PROCESS_ACTION=*|\
+            LOGO=*|\
+            IGNORE_APP_STORE_APPS=*|\
+            SYSTEMOWNER=*|\
+            INSTALL=*|\
+            REOPEN=*|\
+            INTERRUPT_DND=*|\
+            IGNORE_DND_APPS=*|\
+            DIALOG_CMD_FILE=*|\
+            DIALOG_LIST_ITEM_NAME=*|\
+            NOTIFY_DIALOG=*|\
+            LOGGING=*|\
+            log_location=*|\
+            MDMProfileName=*|\
+            datadogAPI=*|\
+            LogDateFormat=*|\
+            GITHUBAPI=*)
+                setVariable "$CLArg" $1
+            ;;
+            name=*|\
+            type=*|\
+            packageID=*|\
+            downloadURL=*|\
+            curlOptions=*|\
+            appNewVersion=*|\
+            versionKey=*|\
+            appCustomVersion*|\
+            expectedTeamID=*|\
+            archiveName=*|\
+            appName=*|\
+            targetDir=*|\
+            blockingProcess=*|\
+            pkgName=*|\
+            updateTool=*|\
+            updateToolArguments=*|\
+            updateToolRunAsCurrentUser=*|\
+            CLIInstaller=*|\
+            CLIArguments=*|\
+            installerTool=*)
+                if [ "$1" = "after" ]; then
+                    setVariable "$CLArg" $1
+                fi
+            ;;
+            *)
+                if [ "$1" = "after" ]; then
+                    printlog "unrecognised variable from argument ignored: $CLArg" WARN
+                fi
+            ;;
+        esac
+    done
+}
+
 # NOTE: check minimal macOS requirement
 autoload is-at-least
 
@@ -1409,23 +1532,31 @@ if ! is-at-least 10.14 $installedOSversion; then
     exit 98
 fi
 
-
 # MARK: argument parsing
-if [[ $# -eq 0 ]]; then
-    if [[ -z $label ]]; then # check if label is set inside script
-        printlog "no label provided, printing labels" REQ
-        grep -E '^[a-z0-9\_-]*(\)|\|\\)$' "$0" | tr -d ')|\' | grep -v -E '^(broken.*|longversion|version|valuesfromarguments)$' | sort
-        #grep -E '^[a-z0-9\_-]*(\)|\|\\)$' "${labelFile}" | tr -d ')|\' | grep -v -E '^(broken.*|longversion|version|valuesfromarguments)$' | sort
-        exit 0
-    fi
-elif [[ $1 == "/" ]]; then
-    # jamf uses sends '/' as the first argument
+if [[ $1 == "/" ]]; then
+    # Jamf uses sends '/' as the first argument
     printlog "shifting arguments for Jamf" REQ
     shift 3
+    # error out if nothing else is provided from Jamf, no need to log labels back to Jamf
+    if [[ $# -eq 0 ]]; then
+        cleanupAndExit 1 "no label provided, what is Jamf installing?" ERROR
+        exit 1
+    fi
+fi
+
+# check if label is set inside script or print label if no label provided inside or outside of script
+if [[ $# -eq 0 ]] && [[ -z $label ]]; then
+    printlog "no label provided, printing labels" REQ
+    grep -E '^[a-z0-9\_-]*(\)|\|\\)$' "$0" | tr -d ')|\' | grep -v -E '^(broken.*|longversion|version|valuesfromarguments)$' | sort
+    #grep -E '^[a-z0-9\_-]*(\)|\|\\)$' "${labelFile}" | tr -d ')|\' | grep -v -E '^(broken.*|longversion|version|valuesfromarguments)$' | sort
+    exit 0
 fi
 
 # first argument is the label
 label=$1
+
+# label(?) captured, argument processessing from here doesn't need to scan it again
+shift 1
 
 # lowercase the label
 label=${label:l}
@@ -1436,9 +1567,19 @@ if [[ $label == "version" ]]; then
     exit 0
 fi
 
-# MARK: Logging
-log_location="/private/var/log/Installomator.log"
+# MARK: Load command line
+commandLineArguments=()
+while [[ -n $1 ]]; do
+    if [[ $1 =~ ".*\=.*" ]]; then
+        # if an argument contains an = character, save it, and drop everything else unless its beforeAfterBOTH
+        commandLineArguments+=("$1")
+    fi
+    # shift to next argument
+    shift 1
+done
+processCommandLineArguments before
 
+# MARK: DEBUG Logging
 # Check if we're in debug mode, if so then set logging to DEBUG, otherwise default to INFO
 # if no log level is specified.
 if [[ $DEBUG -ne 0 ]]; then
@@ -1447,13 +1588,6 @@ elif [[ -z $LOGGING ]]; then
     LOGGING=INFO
     datadogLoggingLevel=INFO
 fi
-
-# Associate logging levels with a numerical value so that we are able to identify what
-# should be removed. For example if the LOGGING=ERROR only printlog statements with the
-# level REQ and ERROR will be displayed. LOGGING=DEBUG will show all printlog statements.
-# If a printlog statement has no level set it's automatically assigned INFO.
-
-declare -A levels=(DEBUG 0 INFO 1 WARN 2 ERROR 3 REQ 4)
 
 # If we are able to detect an MDM URL (Jamf Pro) or another identifier for a customer/instance we grab it here, this is useful if we're centrally logging multiple MDM instances.
 if [[ -f /Library/Preferences/com.jamfsoftware.jamf.plist ]]; then
@@ -1464,9 +1598,6 @@ else
     mdmURL="Unknown"
 fi
 
-# Generate a session key for this run, this is useful to idenify streams when we're centrally logging.
-SESSION=$RANDOM
-
 # MARK: START
 printlog "################## Start Installomator v. $VERSION, date $VERSIONDATE" REQ
 printlog "################## Version: $VERSION" INFO
@@ -1476,11 +1607,6 @@ printlog "################## $label" INFO
 # Check for DEBUG mode
 if [[ $DEBUG -gt 0 ]]; then
     printlog "DEBUG mode $DEBUG enabled." DEBUG
-fi
-
-# How we get version number from app
-if [[ -z $versionKey ]]; then
-    versionKey="CFBundleShortVersionString"
 fi
 
 # get current user
@@ -1499,6 +1625,13 @@ if [[ ! -x $DIALOG_CMD ]]; then
     # Swift Dialog is not installed, clear cmd file variable to ignore
     printlog "SwiftDialog is not installed, clear cmd file var"
     DIALOG_CMD_FILE=""
+fi
+
+# prepare github
+githubAUTH=()
+if [[ -n $GITHUBAPI ]]; then
+    githubAUTH=( --header "Authorization: Bearer $GITHUBAPI" )
+    checkRATEfromGit API
 fi
 
 # MARK: labels in case statement
@@ -9658,15 +9791,7 @@ zulujdkfx17)
 esac
 
 # MARK: finish reading the arguments:
-while [[ -n $1 ]]; do
-    if [[ $1 =~ ".*\=.*" ]]; then
-        # if an argument contains an = character, send it to eval
-        printlog "setting variable from argument $1" INFO
-        eval $1
-    fi
-    # shift to next argument
-    shift 1
-done
+processCommandLineArguments after
 
 # verify we have everything we need
 if [[ -z $name ]]; then
@@ -9925,6 +10050,11 @@ else
         fi
     fi
 
+    if [[ "${githubAUTH}" != "" ]]; then
+        checkRATEfromGit API
+        githubAUTH+=( --header "Accept: application/octet-stream" )
+        curlOptions+=( ${githubAUTH} )
+    fi
     if [[ $DIALOG_CMD_FILE != "" ]]; then
         # pipe
         pipe="$tmpDir/downloadpipe"
@@ -10034,3 +10164,4 @@ finishing
 
 # all done!
 cleanupAndExit 0 "All done!" REQ
+
