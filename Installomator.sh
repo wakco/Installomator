@@ -341,7 +341,9 @@ datadogAPI=""
 # See more here: https://www.datadoghq.com/product/log-management/
 
 # Github API key for managing Githubs rate limits, intended for use in Labs sharing
-# a single NAT'd IP address. Create and use an API key limited to read only access.
+# a single NAT'd IP address.
+# Create and use an API key limited to read only access, the following permissions are
+# required: public_repo, read:packages
 GITHUBAPI=""
 
 # Check if we have rosetta installed
@@ -514,19 +516,27 @@ deduplicatelogs() {
 
 checkRATEfromGit() {
     githubrate="$(curl -sI ${githubAUTH} "https://api.github.com/" | tr -d "\r" )"
-    githubremaining="$( echo "$githubrate" | awk '/x-ratelimit-remaining:/ { print $NF }' )"
-    githubreset=$( echo "$githubrate" | awk '/x-ratelimit-reset:/ { print $NF }' )
-    githublimit=$( echo "$githubrate" | awk '/x-ratelimit-limit:/ { print $NF }' )
-    if [ $githubremaining = 0 ]; then
-        cleanupAndExit 14 "can not download from Github because hits remaining is 0, with the limit at $githublimit per hour, it will reset at $( date -jr $githubreset )" ERROR
-    fi
-    if [ "$1" = "API" ]; then
-        if [ $githubremaining -lt 100 ]; then
-            printlog "Using Github API, remaining API hits available for Github is $githubremaining out of $githublimit per hour, and is below a recommended 100 API hits available. The count will reset at $( date -jr $githubreset )" WARN
-        else
-            printlog "Using Github API, remaining API hits available for Github is $githubremaining out of $githublimit per hour, and is above a recommended 100 API hits available. The count will reset at $( date -jr $githubreset )" INFO
+    # check permissions
+    if [[ "$(echo "$githubrate" | head -1 )" != "HTTP/2 200" ]]; then
+        return 1
+    elif [[ "$( echo "$githubrate" | grep "x-oauth-scopes:" | grep "public_repo" | grep "read:packages" )" = "" ]];; then
+        return 2
+    else
+        githubremaining="$( echo "$githubrate" | awk '/x-ratelimit-remaining:/ { print $NF }' )"
+        githubreset=$( echo "$githubrate" | awk '/x-ratelimit-reset:/ { print $NF }' )
+        githublimit=$( echo "$githubrate" | awk '/x-ratelimit-limit:/ { print $NF }' )
+        if [ $githubremaining = 0 ]; then
+            cleanupAndExit 14 "can not download from Github because hits remaining is 0, with the limit at $githublimit per hour, it will reset at $( date -jr $githubreset )" ERROR
+        fi
+        if [ "$1" = "API" ]; then
+            if [ $githubremaining -lt 100 ]; then
+                printlog "Using Github API, remaining API hits available for Github is $githubremaining out of $githublimit per hour, and is below a recommended 100 API hits available. The count will reset at $( date -jr $githubreset )" WARN
+            else
+                printlog "Using Github API, remaining API hits available for Github is $githubremaining out of $githublimit per hour, and is above a recommended 100 API hits available. The count will reset at $( date -jr $githubreset )" INFO
+            fi
         fi
     fi
+    return 0
 }
 
 # will get the latest release download from a github repo
@@ -1631,6 +1641,11 @@ githubAUTH=()
 if [[ -n $GITHUBAPI ]]; then
     githubAUTH=( --header "Authorization: Bearer $GITHUBAPI" )
     checkRATEfromGit API
+    githubauthfail=$?
+    if [ $githubauthfail -gt 0 ]; then
+        githubAUTH=()
+        printlog "ignoring GITHUBAPI due to access issues ($(if [ $githubauthfail = 1 ]; then echo "no access, is the token correct? does it exist?" ; elif [ $githubauthfail = 2 ]; then echo "insufficient access, public_repo, and read:packages are required" ; else echo "unknown" ; fi)" WARN
+    fi
 fi
 
 # MARK: labels in case statement
