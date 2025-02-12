@@ -343,7 +343,7 @@ datadogAPI=""
 # Github API key for managing Githubs rate limits, intended for use in Labs sharing
 # a single NAT'd IP address.
 # Create and use an API key limited to read only access, the following permissions are
-# recommended: public_repo, read:packages, read:project
+# required: public_repo, read:packages
 GITHUBAPI=""
 
 # Check if we have rosetta installed
