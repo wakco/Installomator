@@ -26,7 +26,7 @@ export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 # also no actual installation will be performed
 # debug mode 1 will download to the directory the script is run in, but will not check the version
 # debug mode 2 will download to the temp directory, check for blocking processes, check the version, but will not install anything or remove the current version
-DEBUG=1
+DEBUG=0
 
 # notify behavior
 NOTIFY=success
@@ -221,6 +221,8 @@ NOTIFY_DIALOG=0
 #     - CFBundleVersion
 #   Not all software titles uses fields the same.
 #   See Opera label.
+#   This is the default setting:
+versionKey="CFBundleShortVersionString"
 #
 # - appCustomVersion(){}: (optional function)
 #   This function can be added to your label, if a specific custom
@@ -244,6 +246,8 @@ NOTIFY_DIALOG=0
 #   When not given the archiveName is derived from the $name.
 #   Note: This has to be defined BEFORE calling downloadURLFromGit or
 #   versionFromGit functions in the label.
+#   Due to the potential of file naming issues when pattern matching, downloadURLFromGit
+#   will reset the archiveName to the download filename from GitHub.
 #
 # - appName: (optional)
 #   File name of the app bundle in the dmg to verify and copy (include .app).
