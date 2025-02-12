@@ -188,8 +188,6 @@ downloadURLFromGit() { # $1 git user name, $2 git repo name
         filetype+=$type
     fi
 
-    checkRATEfromGit
-
     if [[ "${githubAUTH}" = "" ]]; then
         downloadURL=$(curl -sfL "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | awk -F '"' "/browser_download_url/ && /$filetype\"/ { print \$4; exit }")
         if [[ "$(echo $downloadURL | grep -ioE "https.*$filetype")" == "" ]]; then
@@ -201,9 +199,11 @@ downloadURLFromGit() { # $1 git user name, $2 git repo name
             # remove any pattern matching that might screw up the downloaded filename
         fi
     else
+        checkRATEfromGit
         # find "asset" download link
         gitassetcount=0
-        gitassets="$(getJSONValue "$(curl -sfL ${githubAUTH} "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest")" ".assets")"
+        gitlatest="$(curl -sfL ${githubAUTH} "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest")"
+        gitassets="$(getJSONValue "$gitlatest" ".assets")"
         until [ "$(getJSONValue "$gitassets" "[$gitassetcount].id")" = "" ]; do
             if [[ "$(echo "$(getJSONValue "$gitassets" "[$gitassetcount].name")" | grep -ioE ".*$filetype")" != "" ]]; then
                 downloadURL="$(getJSONValue "$gitassets" "[$gitassetcount].url")"
@@ -228,12 +228,15 @@ versionFromGit() {
     gitusername=${1?:"no git user name"}
     gitreponame=${2?:"no git repo name"}
 
-    checkRATEfromGit
-
     if [[ "${githubAUTH}" = "" ]]; then
         appNewVersion=$(curl -sLI "https://github.com/$gitusername/$gitreponame/releases/latest" | grep -i "^location" | tr "/" "\n" | tail -1 | sed 's/[^0-9\.]//g')
     else
-        appNewVersion=$(curl -L --silent --fail ${githubAUTH} "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | grep tag_name | cut -d '"' -f 4 | sed 's/[^0-9\.]//g')
+        if [[ "$gitlatest" = "" ]]; then
+            checkRATEfromGit
+            appNewVersion=$(curl -L --silent --fail ${githubAUTH} "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest" | grep tag_name | cut -d '"' -f 4 | sed 's/[^0-9\.]//g')
+        else
+            appNewVersion=$(getJSONValue "$gitlatest" "tag_name" | sed 's/[^0-9\.]//g' )
+        fi
     fi
     if [ -z "$appNewVersion" ]; then
         printlog "could not retrieve version number for $gitusername/$gitreponame" WARN
