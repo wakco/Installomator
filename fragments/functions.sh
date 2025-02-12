@@ -196,13 +196,19 @@ downloadURLFromGit() { # $1 git user name, $2 git repo name
             #downloadURL=https://github.com$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*$filetype" | head -1)
             downloadURL="https://github.com$(curl -sfL "$(curl -sfL "https://github.com/$gitusername/$gitreponame/releases/latest" | tr '"' "\n" | grep -i "expanded_assets" | head -1)" | tr '"' "\n" | grep -i "^/.*\/releases\/download\/.*$filetype" | head -1)"
         fi
+        if [[ "$(echo $downloadURL | grep -ioE "https.*$filetype")" != "" ]]; then
+            archiveName="$( echo $downloadURL | awk -F '/' '{ print $NF }' )"
+            # remove any pattern matching that might screw up the downloaded filename
+        fi
     else
         # find "asset" download link
         gitassetcount=0
-        gitassets="$(getJSONValue "$(curl -sfL ${githubAUTH} "https://api.github.com/repos/processing/processing4/releases/latest")" ".assets")"
+        gitassets="$(getJSONValue "$(curl -sfL ${githubAUTH} "https://api.github.com/repos/$gitusername/$gitreponame/releases/latest")" ".assets")"
         until [ "$(getJSONValue "$gitassets" "[$gitassetcount].id")" = "" ]; do
             if [[ "$(echo "$(getJSONValue "$gitassets" "[$gitassetcount].name")" | grep -ioE ".*$filetype")" != "" ]]; then
                 downloadURL="$(getJSONValue "$gitassets" "[$gitassetcount].url")"
+                archiveName="$(getJSONValue "$gitassets" "[$gitassetcount].name")"
+                # remove any pattern matching that might screw up the downloaded filename
                 break
             fi
             ((gitassetcount++))
@@ -1122,7 +1128,7 @@ processCommandLineArguments() {
             MDMProfileName=*|\
             datadogAPI=*|\
             LogDateFormat=*|\
-            githubAPI=*)
+            GITHUBAPI=*)
                 setVariable "$CLArg" $1
             ;;
             name=*|\
