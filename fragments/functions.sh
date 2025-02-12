@@ -1099,7 +1099,7 @@ updateDialog() {
 }
 
 setVariable() {
-    if [ "$1" = "after" ]; then
+    if [ "$2" = "after" ]; then
         # only log it when setting after.
         printlog "setting variable from argument $1" INFO
     fi
