@@ -175,6 +175,7 @@ checkRATEfromGit() {
             fi
         fi
     fi
+    return 0
 }
 
 # will get the latest release download from a github repo
