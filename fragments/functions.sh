@@ -154,7 +154,7 @@ deduplicatelogs() {
 }
 
 checkRATEfromGit() {
-    githubrate="$(curl -sI ${githubAUTH} https://api.github.com/)"
+    githubrate="$(curl -sI ${githubAUTH} "https://api.github.com/" | tr -d "\r" )"
     githubremaining="$( echo "$githubrate" | awk '/x-ratelimit-remaining:/ { print $NF }' )"
     githubreset=$( echo "$githubrate" | awk '/x-ratelimit-reset:/ { print $NF }' )
     githublimit=$( echo "$githubrate" | awk '/x-ratelimit-limit:/ { print $NF }' )
