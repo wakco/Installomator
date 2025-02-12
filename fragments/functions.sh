@@ -158,7 +158,7 @@ checkRATEfromGit() {
     # check permissions
     if [[ "$(echo "$githubrate" | grep 'HTTP/2 200' )" = "" ]]; then
         return 1
-    elif [[ "$( echo "$githubrate" | grep "x-oauth-scopes:" | grep "public_repo" | grep "read:packages" )" = "" ]];; then
+    elif [[ "$( echo "$githubrate" | grep "x-oauth-scopes:" | grep "public_repo" | grep "read:packages" )" = "" ]]; then
         return 2
     else
         githubremaining="$( echo "$githubrate" | awk '/x-ratelimit-remaining:/ { print $NF }' )"
