@@ -154,16 +154,16 @@ deduplicatelogs() {
 }
 
 checkRATEfromGit() {
-    githubrate="$(curl -s ${githubAUTH} https://api.github.com/rate_limit)"
-    githubremaining="$( echo $githubrate | grep remaining | tail -n 1 | awk '{ print $2 }' | tr -d ',' )"
-    githubreset=$( echo $githubrate | grep reset | tail -n 1 | awk '{ print $2 }' | tr -d ',' )
-    githublimit=$( echo $githubrate | grep limit | tail -n 1 | awk '{ print $2 }' | tr -d ',' )
+    githubrate="$(curl -sI ${githubAUTH} https://api.github.com/)"
+    githubremaining="$( echo "$githubrate" | awk '/x-ratelimit-remaining:/ { print $NF }' )"
+    githubreset=$( echo "$githubrate" | awk '/x-ratelimit-reset:/ { print $NF }' )
+    githublimit=$( echo "$githubrate" | awk '/x-ratelimit-limit:/ { print $NF }' )
     if [ $githubremaining = 0 ]; then
         cleanupAndExit 14 "can not download from Github because hits remaining is 0, with the limit at $githublimit per hour, it will reset at $( date -jr $githubreset )" ERROR
     fi
     if [ "$1" = "API" ]; then
         if [ $githubremaining -lt 100 ]; then
-            printlog "Using Github API, remaining API hits available for Github is $githubremaining out of $githublimit per hour, and is below a recommended 100 API hits available. The count will reset at $( date -jr $githubreset )" WARN
+            printlog "Using Github API, remaining API hits available for Github is $githubremaining out of $githublimit per hour, and is below a recommended 100 API hits remaining. The count will reset at $( date -jr $githubreset )" WARN
         else
             printlog "Using Github API, remaining API hits available for Github is $githubremaining out of $githublimit per hour, and is above a recommended 100 API hits available. The count will reset at $( date -jr $githubreset )" INFO
         fi
