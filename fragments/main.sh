@@ -266,7 +266,7 @@ else
     fi
 
     if [[ "${githubAUTH}" != "" ]]; then
-        if [[ "$downloadURL" =~ "https://api.github.com"* ]]; then
+        if [[ "$downloadURL" =~ "https://api.github.com/"* ]]; then
             checkRATEfromGit API
             githubAUTH+=( --header "Accept: application/octet-stream" )
             curlOptions+=( ${githubAUTH} )
