@@ -103,6 +103,11 @@ githubAUTH=()
 if [[ -n $GITHUBAPI ]]; then
     githubAUTH=( --header "Authorization: Bearer $GITHUBAPI" )
     checkRATEfromGit API
+    githubauthfail=$?
+    if [ $githubauthfail -gt 0 ]; then
+        githubAUTH=()
+        printlog "ignoring GITHUBAPI due to access issues ($(if [ $githubauthfail = 1 ]; then echo "no access, is the token correct? does it exist?" ; elif [ $githubauthfail = 2 ]; then echo "insufficient access, public_repo, and read:packages are required" ; else echo "unknown" ; fi)" WARN
+    fi
 fi
 
 # MARK: labels in case statement
