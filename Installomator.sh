@@ -10052,7 +10052,7 @@ else
             githubAUTH+=( --header "Accept: application/octet-stream" )
             curlOptions+=( ${githubAUTH} )
         else
-            printlog "ignoring GITHUBAPI as $downloadURL is not a Guthub API URL" WARN
+            printlog "ignoring GITHUBAPI as $downloadURL is not a Github API URL" WARN
         fi
     fi
     if [[ $DIALOG_CMD_FILE != "" ]]; then
