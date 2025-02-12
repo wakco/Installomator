@@ -156,7 +156,7 @@ deduplicatelogs() {
 checkRATEfromGit() {
     githubrate="$(curl -sI ${githubAUTH} "https://api.github.com/" | tr -d "\r" )"
     # check permissions
-    if [[ "$(echo "$githubrate" | head -1 )" != "HTTP/2 200" ]]; then
+    if [[ "$(echo "$githubrate" | grep 'HTTP/2 200' )" = "" ]]; then
         return 1
     elif [[ "$( echo "$githubrate" | grep "x-oauth-scopes:" | grep "public_repo" | grep "read:packages" )" = "" ]];; then
         return 2
