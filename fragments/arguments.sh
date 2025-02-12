@@ -45,11 +45,7 @@ fi
 # MARK: Load command line
 commandLineArguments=()
 while [[ -n $1 ]]; do
-    if [[ $1 =~ ".*\=.*" ]]; then
-        # if an argument contains an = character, save it, and drop everything else unless its beforeAfterBOTH
-        commandLineArguments+=("$1")
-    fi
-    # shift to next argument
+    commandLineArguments+=("$1")
     shift 1
 done
 processCommandLineArguments before
