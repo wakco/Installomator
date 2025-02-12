@@ -84,11 +84,6 @@ if [[ $DEBUG -gt 0 ]]; then
     printlog "DEBUG mode $DEBUG enabled." DEBUG
 fi
 
-# How we get version number from app
-if [[ -z $versionKey ]]; then
-    versionKey="CFBundleShortVersionString"
-fi
-
 # get current user
 currentUser=$(scutil <<< "show State:/Users/ConsoleUser" | awk '/Name :/ { print $3 }')
 
