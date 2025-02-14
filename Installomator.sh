@@ -1497,9 +1497,6 @@ processCommandLineArguments() {
                 unrecognisedOption=false
                 if [ "$1" = "after" ]; then
                     CLArgVar="$CLArg"
-                    if [[ "$CLArg" =~ *';'* ]]; then
-                        unrecognisedOption=true
-                    fi
                 else
                     CLArgVar="$(echo "$CLArg" | cut -d ';' -f 1)"
                 fi
@@ -1538,10 +1535,12 @@ processCommandLineArguments() {
         esac
         if [ "$1" = "after" ]; then
             # only log it when setting after.
-            if $unrecognisedOption; then
-                printlog "Processing unrecognised command line option: $CLArg" WARN
+            if [[ "$CLArg" =~ *';'* ]]; then
+                printlog "Processed multiple command line options as a mini script: $CLArg" WARN
+            elif $unrecognisedOption; then
+                printlog "Processed unrecognised command line option: $CLArg" WARN
             else
-                printlog "Processing command line option: $CLArg" INFO
+                printlog "Processed command line option: $CLArg" INFO
             fi
         fi
     done
