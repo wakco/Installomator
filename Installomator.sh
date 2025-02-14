@@ -1470,15 +1470,8 @@ updateDialog() {
     fi
 }
 
-setVariable() {
-    if [ "$2" = "after" ]; then
-        # only log it when setting after.
-        printlog "setting variable from argument $1" INFO
-    fi
-    eval $1
-}
-
 processCommandLineArguments() {
+    unrecognisedOption=""
     for CLArg in $commandLineArguments ; do
         case "$CLArg" in
             DEBUG=*|\
@@ -1501,7 +1494,16 @@ processCommandLineArguments() {
             datadogAPI=*|\
             LogDateFormat=*|\
             GITHUBAPI=*)
-                setVariable "$CLArg" $1
+                unrecognisedOption=false
+                if [ "$1" = "after" ]; then
+                    CLArgVar="$CLArg"
+                    if [[ "$CLArg" =~ *';'* ]]; then
+                        unrecognisedOption=true
+                    fi
+                else
+                    CLArgVar="$(echo "$CLArg" | cut -d ';' -f 1)"
+                fi
+                eval "$(echo "$CLArgVar" | cut -d "=" -f 1)=$(echo "$CLArgVar" | cut -d "=" -f 2-)"
             ;;
             name=*|\
             type=*|\
@@ -1523,16 +1525,25 @@ processCommandLineArguments() {
             CLIInstaller=*|\
             CLIArguments=*|\
             installerTool=*)
-                if [ "$1" = "after" ]; then
-                    setVariable "$CLArg" $1
-                fi
-            ;;
+                unrecognisedOption=false
+            ;&
             *)
                 if [ "$1" = "after" ]; then
-                    printlog "unrecognised variable from argument ignored: $CLArg" WARN
+                    eval "$CLArg"
+                fi
+                if [ "$unrecognisedOption" = "" ]; then
+                    unrecognisedOption=true
                 fi
             ;;
         esac
+        if [ "$1" = "after" ]; then
+            # only log it when setting after.
+            if $unrecognisedOption; then
+                printlog "Processing unrecognised command line option: $CLArg" WARN
+            else
+                printlog "Processing command line option: $CLArg" INFO
+            fi
+        fi
     done
 }
 
