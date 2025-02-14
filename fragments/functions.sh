@@ -1174,3 +1174,149 @@ processCommandLineArguments() {
         esac
     done
 }
+
+# Or dump setVariable and restore processing unrecognised options:
+#processCommandLineArguments() {
+#    unrecognisedOption=""
+#    for CLArg in $commandLineArguments ; do
+#        case "$CLArg" in
+#            DEBUG=*|\
+#            NOTIFY=*|\
+#            PROMPT_TIMEOUT=*|\
+#            BLOCKING_PROCESS_ACTION=*|\
+#            LOGO=*|\
+#            IGNORE_APP_STORE_APPS=*|\
+#            SYSTEMOWNER=*|\
+#            INSTALL=*|\
+#            REOPEN=*|\
+#            INTERRUPT_DND=*|\
+#            IGNORE_DND_APPS=*|\
+#            DIALOG_CMD_FILE=*|\
+#            DIALOG_LIST_ITEM_NAME=*|\
+#            NOTIFY_DIALOG=*|\
+#            LOGGING=*|\
+#            log_location=*|\
+#            MDMProfileName=*|\
+#            datadogAPI=*|\
+#            LogDateFormat=*|\
+#            GITHUBAPI=*)
+#                unrecognisedOption=false
+#                eval "$CLArg"
+#            ;;
+#            name=*|\
+#            type=*|\
+#            packageID=*|\
+#            downloadURL=*|\
+#            curlOptions=*|\
+#            appNewVersion=*|\
+#            versionKey=*|\
+#            appCustomVersion*|\
+#            expectedTeamID=*|\
+#            archiveName=*|\
+#            appName=*|\
+#            targetDir=*|\
+#            blockingProcess=*|\
+#            pkgName=*|\
+#            updateTool=*|\
+#            updateToolArguments=*|\
+#            updateToolRunAsCurrentUser=*|\
+#            CLIInstaller=*|\
+#            CLIArguments=*|\
+#            installerTool=*)
+#                unrecognisedOption=false
+#            ;&
+#            *)
+#                if [ "$1" = "after" ]; then
+#                    eval "$CLArg"
+#                fi
+#                if [ "$unrecognisedOption" = "" ]; then
+#                    unrecognisedOption=true
+#                fi
+#            ;;
+#        esac
+#        if [ "$1" = "after" ]; then
+#            # only log it when setting after.
+#            if $unrecognisedOption; then
+#                printlog "Processing unrecognised command line option: $CLArg" WARN
+#            else
+#                printlog "Processing command line option: $1" INFO
+#            fi
+#        fi
+#    done
+#}
+#
+# Or stricter processing while processing unrecognised options:
+#processCommandLineArguments() {
+#    for CLArg in $commandLineArguments ; do
+#        unrecognisedOption=""
+#        case "$CLArg" in
+#            DEBUG=*|\
+#            NOTIFY=*|\
+#            PROMPT_TIMEOUT=*|\
+#            BLOCKING_PROCESS_ACTION=*|\
+#            LOGO=*|\
+#            IGNORE_APP_STORE_APPS=*|\
+#            SYSTEMOWNER=*|\
+#            INSTALL=*|\
+#            REOPEN=*|\
+#            INTERRUPT_DND=*|\
+#            IGNORE_DND_APPS=*|\
+#            DIALOG_CMD_FILE=*|\
+#            DIALOG_LIST_ITEM_NAME=*|\
+#            NOTIFY_DIALOG=*|\
+#            LOGGING=*|\
+#            log_location=*|\
+#            MDMProfileName=*|\
+#            datadogAPI=*|\
+#            LogDateFormat=*|\
+#            GITHUBAPI=*)
+#                eval "$(echo "$CLArg" | cut -d "=" -f 1)='$(echo "$CLArg" | cut -d "=" -f 2-)'"
+#                unrecognisedOption=false
+#            ;;
+#            name=*|\
+#            type=*|\
+#            packageID=*|\
+#            downloadURL=*|\
+#            curlOptions=*|\
+#            appNewVersion=*|\
+#            versionKey=*|\
+#            expectedTeamID=*|\
+#            archiveName=*|\
+#            appName=*|\
+#            targetDir=*|\
+#            blockingProcess=*|\
+#            pkgName=*|\
+#            updateTool=*|\
+#            updateToolArguments=*|\
+#            updateToolRunAsCurrentUser=*|\
+#            CLIInstaller=*|\
+#            CLIArguments=*|\
+#            installerTool=*)
+#                if [ "$1" = "after" ]; then
+#                    eval "$(echo "$CLArg" | cut -d "=" -f 1)='$(echo "$CLArg" | cut -d "=" -f 2-)'"
+#                fi
+#                unrecognisedOption=false
+#            ;;
+#            appCustomVersion*)
+#                unrecognisedOption=false
+#            ;&
+#            *)
+#                if [ "$1" = "after" ]; then
+#                    eval "$CLArg"
+#                fi
+#                if [ "$unrecognisedOption" = "" ]; then
+#                    unrecognisedOption=true
+#                fi
+#            ;;
+#        esac
+#        if [ "$1" = "after" ]; then
+#            # only log it when setting after.
+#            if $unrecognisedOption; then
+#                printlog "Processing unrecognised command line option: $CLArg" WARN
+#            else
+#                printlog "Processing command line option: $1" INFO
+#            fi
+#        fi
+#    done
+#}
+
