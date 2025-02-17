@@ -1535,7 +1535,7 @@ processCommandLineArguments() {
         esac
         if [ "$1" = "after" ]; then
             # only log it when setting after.
-            if [[ "$CLArg" =~ *';'* ]]; then
+            if [[ "$CLArg" =~ *\;* ]]; then
                 printlog "Processed multiple command line options as a mini script: $CLArg" WARN
             elif $unrecognisedOption; then
                 printlog "Processed unrecognised command line option: $CLArg" WARN
